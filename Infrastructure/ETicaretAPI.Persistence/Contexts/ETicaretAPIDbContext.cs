@@ -1,4 +1,5 @@
 ﻿using ETicaretAPI.Domain.Entities;
+using ETicaretAPI.Domain.Entities.Common;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,25 @@ namespace ETicaretAPI.Persistence.Contexts
         public DbSet<Product> Products { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<Customer> Customers { get; set; }
+        //araya interception koyarak her veri güncelleme yapıldığında ilgili kaydın updated date nin dğeişmesini sağlıyoruz.
+        //Neredeyse bütün Entity Framework metodlarını burada override edebilirim
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            //ChangeTracker: Entityler üzerinden yapılan değişiklerin ya da yeni eklenen verilerin yakalanmasını sağlar.Update operasyonlarında Track edilen verinin yakalanıp elde edilmesini sağlar.
+            var datas = ChangeTracker.Entries<BaseEntity>();
+
+            foreach (var data in datas)
+            {
+                _ = data.State switch
+                {
+                    EntityState.Added => data.Entity.CreatedDate = DateTime.Now,
+                    EntityState.Modified => data.Entity.UpdatedDate = DateTime.Now,
+                    _ => DateTime.Now
+                };
+            }    
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
     }
 }
 
